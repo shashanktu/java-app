@@ -1,7 +1,8 @@
-FROM openjdk:8-alpine
-
-EXPOSE 8080
-
-ADD target/docker-demo.jar docker-demo.jar
-
-ENTRYPOINT ["java" ,"-jar","docker-demo.jar"]
+# Use a base image with a web server installed (e.g., nginx)
+FROM nginx:latest
+# Copy the HTML files to the appropriate location in the container
+COPY index.html /usr/share/nginx/html/
+# Expose port 80 to allow incoming traffic
+EXPOSE 80
+# Start the web server when the container is run
+CMD ["nginx", "-g", "daemon off;"]
