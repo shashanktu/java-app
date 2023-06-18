@@ -1,41 +1,26 @@
 node {
-  def image
-   stage ('checkout') {
-        checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/harshalkathar/myfirstapp.git']]])      
-        }
-   
-   stage ('Build') {
-         def mvnHome = tool name: 'maven', type: 'maven'
-         def mvnCMD = "${mvnHome}/bin/mvn "
-         sh "${mvnCMD} clean package"           
-        }
-    stage('Build image') {
-  
-       app = docker.build("<gcp-project-id>/springboot")
-    }
+def image
+//1// stage ('checkout') {
+checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/shashanktu/ADOK8.git']]]) 
+}
 
-    stage('Push image to gcr') {
-        docker.withRegistry('https://gcr.io', 'gcr:gcp') {
-            app.push("${env.BUILD_NUMBER}")
-        }
-    }
+//2// stage ('Build') {
+def mvnHome = tool name: 'maven', type: 'maven'
+def mvnCMD = "${mvnHome}/bin/mvn "
+sh "${mvnCMD} clean package" 
+}
 
-    stage('Update GIT') {
-            script {
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') 
-                {
-                    withCredentials([usernamePassword(credentialsId: 'gitlogin', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                        def encodedPassword = URLEncoder.encode("$GIT_PASSWORD",'UTF-8')
-                        sh "git config user.email katharharshal1@gmail.com"
-                        sh "git config user.name harshalkathar"
-                        sh "sed -i 's+<gcp-project-id>/springboot.*+<gcp-project-id>/springboot:${env.BUILD_NUMBER}+g' spring-boot.yaml"
-                        sh "git add ."
-                        sh "git commit -m 'jenkinsbuild: ${env.BUILD_NUMBER}'"
-                        sh "git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/myfirstapp.git HEAD:master"
-                }
-                    
-                  }
-                
-            }
-    }        
+
+//3// stage ('Docker Build') {
+
+docker.build('springboot')
+}
+//4// stage ('Docker push')
+docker.withRegistry('https://670166063118.dkr.ecr.us-east-1.amazonaws.com', 'ecr:us-east-1:test-ecr') {
+docker.image('springboot').push('latest')
+}
+
+//5// stage ('K8S Deploy'){
+sh 'kubectl apply -f spring-boot.yaml'
+} 
 }
